@@ -47,7 +47,7 @@ def check_last_game(gameId, puuid):
         game = response.json()
 
         summoner = find_participant_by_puuid(game, puuid)
-        if summoner['win'] == 'true':
+        if summoner['win'] == True:
             return True, game['info']['gameDuration']
         else:
             return False, game['info']['gameDuration']
