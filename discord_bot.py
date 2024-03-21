@@ -25,6 +25,10 @@ async def stalk(ctx, *args):
     channel = ctx.channel
 
     for arg in args:
+        if "#" not in arg or arg.index("#") == 0 or arg.index("#") == len(arg) - 1:
+            await send_message(f"Invalid summoner name, must be in this format : example#na1")
+            continue
+
         game_name, tag_line = arg.split("#")
         summoner_data = Riot.get_summoner_puuid(game_name, tag_line)
         if summoner_data:
@@ -32,7 +36,6 @@ async def stalk(ctx, *args):
             await send_embed(f"Sitting in a bush", f"Now stalking {game_name}", discord.Color.dark_embed())
         else:
             await send_message(f"Failed to find summoner with name {game_name}#{tag_line}")
-        await ye('4948039213',summoner_data['puuid'])
 
 
 @tasks.loop(minutes=5)
@@ -54,8 +57,9 @@ async def check_game_status():
                 if game_won:
                     await send_embed(f"VICTORY", f"{summoner_name} won a game yipee!!", discord.Color.green())
                 else:
-                    await send_embed(f"DEFEAT", f"{summoner_name} wasted {game_duration_minutes} minutes on a game just to lose",
-                               discord.Color.red())
+                    await send_embed(f"DEFEAT",
+                                     f"{summoner_name} wasted {game_duration_minutes} minutes on a game just to lose",
+                                     discord.Color.red())
                 del tracking_info["gameId"]
 
 
@@ -72,23 +76,3 @@ async def send_embed(title, description, color):
         color=color
     )
     await channel.send(embed=embed)
-
-
-async def ye(gameId, summoner_puuid):
-    game_info = Riot.check_last_game(gameId, summoner_puuid)
-    tracking_info = player_tracking_info[summoner_puuid]
-    tracking_info["gameId"] = gameId
-    summoner_name = tracking_info.get("game_name")
-    if game_info is not None:
-        game_won, game_duration = game_info
-        game_duration_minutes = game_duration // 60
-
-        if game_won:
-            await send_embed(f"VICTORY", f"{summoner_name} won a game yipee!!", discord.Color.green())
-        else:
-            await send_embed(f"DEFEAT",
-                             f"{summoner_name} wasted {game_duration_minutes} minutes on a game just to lose",
-                             discord.Color.red())
-        del tracking_info["gameId"]
-    else:
-        await send_message("Failed to fetch game information.")
