@@ -25,7 +25,7 @@ def get_current_game(puuid):
         response.raise_for_status()
         data = response.json()
         #currect_game(data, puuid)
-        if data["gameType"] == "MATCHED":
+        if data["gameType"] == "MATCHED" and data["gameMode"] == "CLASSIC":
             return {"in_game": True, "gameId":data["gameId"]}
     except requests.exceptions.RequestException as e:
         return {"in_game": False}
