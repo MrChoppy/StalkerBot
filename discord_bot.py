@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands, tasks
 import riot_api as Riot
 import database as DB
+import asyncio
 
 intents = discord.Intents.default()
 intents.messages = True
@@ -33,11 +34,12 @@ async def stalk(ctx, *args):
             return
         game_name, tag_line = arg.split("#")
 
-        summoner_puuid = DB.get_summoner_puuid(game_name, tag_line)
-        if summoner_puuid:
+        db_summoner_data = DB.get_summoner(game_name, tag_line)
+        if db_summoner_data:
+            db_game_name, db_tag_line, db_summoner_puuid = db_summoner_data
             await send_embed(
                 title="Sitting in a bush",
-                description=f"Now stalking {game_name}",
+                description=f"Now stalking {db_game_name}#{db_tag_line}",
                 color=discord.Color.dark_embed())
         else:
             summoner_data = Riot.get_summoner_puuid(game_name, tag_line)
@@ -65,14 +67,41 @@ async def unstalk(ctx, *args):
             return
         game_name, tag_line = arg.split("#")
 
-        summoner_puuid = DB.get_summoner_puuid(game_name, tag_line)
-        if summoner_puuid:
-            DB.delete_summoner(summoner_puuid)
-            await send_message(f"Stopped stalking {game_name}#{tag_line}")
+    
+        db_summoner_data = DB.get_summoner(game_name, tag_line)
+        if db_summoner_data:
+            db_game_name, db_tag_line, db_summoner_puuid = db_summoner_data
+            DB.delete_summoner(db_summoner_puuid)
+            await send_embed(
+                title="Out of the bush",
+                description=f"Stopped stalking {db_game_name}#{db_tag_line}",
+                color=discord.Color.dark_embed())
         else:
-            await send_message(f"You're not currently stalking {game_name}#{tag_line}")
+            await send_embed(
+                title="Who?",
+                description=f"You're not currently stalking {game_name}#{tag_line}",
+                color=discord.Color.dark_embed())
 
+@client.command()
+async def stalklist(ctx):
+    global channel
+    channel = ctx.channel
+    stalked_players = DB.get_all_summoners()
 
+    if stalked_players:
+        embed_title = "Stalk List"
+        embed_description = ""
+        embed_color = discord.Color.green()
+
+        for player in stalked_players:
+            puuid, game_name, tag_line, *_ = player
+            embed_description += f"**{game_name}#{tag_line}**\n"
+
+        await send_embed(embed_title, embed_description, embed_color)
+    else:
+        await send_embed("Stalk List", "No players are currently being stalked.", discord.Color.red())
+
+ 
 @tasks.loop(minutes=3)
 async def check_game_status():
     all_tracked_summoners = DB.get_all_summoners()

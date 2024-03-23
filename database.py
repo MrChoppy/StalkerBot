@@ -34,17 +34,17 @@ def close_connection():
         conn.close()
 
 
-def get_summoner_puuid(game_name, tag_line):
+def get_summoner(game_name, tag_line):
     game_name_clean = game_name.replace(" ", "").lower()
     tag_line_clean = tag_line.replace(" ", "").lower()
 
     c.execute(
-        "SELECT game_name, puuid FROM summoners WHERE LOWER(REPLACE(game_name, ' ', ''))=? AND LOWER(REPLACE(tag_line, ' ', ''))=?",
+        "SELECT game_name, tag_line, puuid FROM summoners WHERE LOWER(REPLACE(game_name, ' ', ''))=? AND LOWER(REPLACE(tag_line, ' ', ''))=?",
         (game_name_clean, tag_line_clean))
     result = c.fetchone()
     if result:
-        original_game_name, puuid = result
-        return original_game_name, puuid
+        original_game_name, tag_line, puuid = result
+        return original_game_name, tag_line, puuid
     else:
         return None
 
@@ -71,7 +71,7 @@ def set_was_in_game(puuid, was_in_game):
 
 
 def get_was_in_game(puuid):
-    c.execute("SELECT was_in_game FROM summoners WHERE puuid=?", (puuid,))
+    c.execute("SELECT was_in_game FROM summoners WHERE puuid=?", puuid)
     return c.fetchone()[0]
 
 
