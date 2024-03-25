@@ -18,16 +18,10 @@ async def on_ready():
     DB.initialize_database()
     check_game_status.start()
 
-@client.event
-async def on_disconnect():
-    DB.close_connection()
     
 # Commands
 @client.command()
 async def stalk(ctx, *args):
-    global channel
-    channel = ctx.channel
-
     for arg in args:
         if "#" not in arg or arg.index("#") == 0 or arg.index("#") == len(arg) - 1:
             await send_message("Invalid summoner name, must be in this format (no spaces): example#na1")
@@ -58,9 +52,6 @@ async def stalk(ctx, *args):
 
 @client.command()
 async def unstalk(ctx, *args):
-    global channel
-    channel = ctx.channel
-
     for arg in args:
         if "#" not in arg or arg.index("#") == 0 or arg.index("#") == len(arg) - 1:
             await send_message(f"Invalid summoner name, must be in this format (no spaces): example#na1")
@@ -84,8 +75,6 @@ async def unstalk(ctx, *args):
 
 @client.command()
 async def stalklist(ctx):
-    global channel
-    channel = ctx.channel
     stalked_players = DB.get_all_summoners()
 
     if stalked_players:
@@ -101,43 +90,58 @@ async def stalklist(ctx):
     else:
         await send_embed("Stalk List", "No players are currently being stalked.", discord.Color.red())
 
+
+@client.command()
+async def start(ctx, *args):
+    global channel
+    channel = ctx.channel
+    await send_message("Bot started. Channel set here.")
  
 @tasks.loop(minutes=3)
 async def check_game_status():
     all_tracked_summoners = DB.get_all_summoners()
     for summoner_puuid, game_name, tag_line, gameId, was_in_game, consecutive_losses, consecutive_wins, time_wasted in all_tracked_summoners:
         game = Riot.get_current_game(summoner_puuid)
-        if game['in_game']:
-            if not was_in_game:
-                DB.set_was_in_game(summoner_puuid, True)
-            if gameId == None:
-                DB.set_game_id(summoner_puuid, game['gameId'])
-        elif was_in_game:
-            if gameId != None:
-                DB.set_was_in_game(summoner_puuid, False)
-                await handle_game_result(summoner_puuid, game_name, gameId)
+        if game:
+            if game['in_game']:
+                if not was_in_game:
+                    DB.set_was_in_game(summoner_puuid, True)
+                if gameId == None:
+                    DB.set_game_id(summoner_puuid, game['gameId'])
+            elif was_in_game:
+                if gameId != None:
+                    DB.set_was_in_game(summoner_puuid, False)
+                    await handle_game_result(summoner_puuid, game_name, gameId, consecutive_losses, consecutive_wins, time_wasted)
 
 
-async def handle_game_result(summoner_puuid, game_name, gameId):
-    game_won, game_duration = Riot.check_last_game(gameId, summoner_puuid)
-    game_duration_minutes = game_duration // 60
+async def handle_game_result(summoner_puuid, game_name, gameId, consecutive_losses, consecutive_wins, time_wasted):
+    game_result = Riot.check_last_game(gameId, summoner_puuid)
+    if game_result is not None:
+        game_won, game_duration = game_result
+        game_duration_minutes = game_duration // 60
 
-    if game_won:
-       await handle_win(summoner_puuid, game_name, game_duration_minutes)
-    else:
-       await handle_loss(summoner_puuid, game_name, game_duration_minutes)
-    DB.set_game_id(summoner_puuid, None)
+        if game_won:
+           await handle_win(summoner_puuid, game_name, game_duration_minutes,consecutive_wins, time_wasted)
+        else:
+           await handle_loss(summoner_puuid, game_name, game_duration_minutes,consecutive_losses, time_wasted)
+        DB.set_game_id(summoner_puuid, None)
 
 
-async def handle_win(summoner_puuid, game_name, game_duration_minutes):
+async def handle_win(summoner_puuid, game_name, game_duration_minutes,consecutive_wins, time_wasted):
     await send_embed(
         title="VICTORY",
-        description=f"{summoner_name} won a game in {game_duration_minutes}!!",
+        description=f"{game_name} won a game in {game_duration_minutes} minutes!!",
         color=discord.Color.green()
     )
 
-    DB.set_consecutive_losses(summoner_puuid, 0)
+    if DB.get_consecutive_losses(summoner_puuid) > 0:
+            DB.set_consecutive_losses(summoner_puuid, 0)
+            DB.set_time_wasted(summoner_puuid, 0)
+            time_wasted = 0
+            
     consecutive_wins += 1
+    time_wasted += game_duration_minutes
+    DB.set_time_wasted(summoner_puuid, time_wasted)
     DB.set_consecutive_wins(summoner_puuid, consecutive_wins)
 
     if consecutive_wins >= 3:
@@ -146,14 +150,21 @@ async def handle_win(summoner_puuid, game_name, game_duration_minutes):
             description=f"{game_name} has won {consecutive_wins} games in a row!",
             color=discord.Color.blue()
         )
+    
+        
 
-
-async def handle_loss(summoner_puuid, game_name, game_duration_minutes):
+async def handle_loss(summoner_puuid, game_name, game_duration_minutes, consecutive_losses, time_wasted):
     await send_embed(
         title="DEFEAT",
-        description=f"{summoner_name} wasted {game_duration_minutes} minutes on a game just to lose",
-        color=discord.Color.red())
-    DB.set_consecutive_wins(summoner_puuid, 0)
+        description=f"{game_name} wasted {game_duration_minutes} minutes on a game just to lose",
+        color=discord.Color.red()
+        )
+        
+    if DB.get_consecutive_wins(summoner_puuid) > 0:
+        DB.set_consecutive_wins(summoner_puuid, 0)
+        DB.set_time_wasted(summoner_puuid, 0)
+        time_wasted = 0
+        
     time_wasted += game_duration_minutes
     consecutive_losses += 1
     DB.set_consecutive_losses(summoner_puuid, consecutive_losses)
@@ -165,9 +176,6 @@ async def handle_loss(summoner_puuid, game_name, game_duration_minutes):
             description=f"{game_name} has lost {consecutive_losses} games in a row for a grand total of {time_wasted} minutes!",
             color=discord.Color.brand_red()
         )
-        # Reset consecutive losses counter
-        DB.set_consecutive_losses(summoner_puuid, 0)
-
 
 # Message sending
 async def send_message(message):

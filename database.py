@@ -84,12 +84,23 @@ def set_consecutive_losses(puuid, consecutive_losses):
     c.execute("UPDATE summoners SET consecutive_losses=? WHERE puuid=?", (consecutive_losses, puuid))
     conn.commit()
 
+def get_consecutive_losses(puuid):
+    c.execute("SELECT consecutive_losses FROM summoners WHERE puuid=?", (puuid,))
+    return c.fetchone()[0]
+   
+   
+def set_consecutive_wins(puuid, consecutive_wins):
+    c.execute("UPDATE summoners SET consecutive_wins=? WHERE puuid=?", (consecutive_wins, puuid))
+    conn.commit()
+
+
+def get_consecutive_wins(puuid):
+    c.execute("SELECT consecutive_wins FROM summoners WHERE puuid=?", (puuid,))
+    return c.fetchone()[0]
+    
 
 def set_time_wasted(puuid, time_wasted):
     c.execute("UPDATE summoners SET time_wasted=? WHERE puuid=?", (time_wasted, puuid))
     conn.commit()
 
 
-def set_consecutive_wins(puuid, consecutive_wins):
-    c.execute("UPDATE summoners SET consecutive_wins=? WHERE puuid=?", (consecutive_wins, puuid))
-    conn.commit()
