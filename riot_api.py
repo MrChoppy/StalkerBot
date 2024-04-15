@@ -98,12 +98,13 @@ def find_participant_by_puuid(game, puuid):
 
 # alternative name get_match_timeline
 def get_gold_difference(game_id, puuid):
-    url = f'https://{region_wide}.api.riotgames.com/lol/match/v5/matches/{game_id}/timeline?api_key={riot_api_key}'
+    try:
+        url = f'https://{region_wide}.api.riotgames.com/lol/match/v5/matches/NA1_{game_id}/timeline?api_key={riot_api_key}'
 
-    response = requests.get(url)
-    if response.status_code == 200:
-        timeline_data = response.json()
-        timeline_data = timeline_data['info']
+        response = requests.get(url)
+        response.raise_for_status()
+
+        timeline_data = response.json()['info']
 
         main_player = 0
         opponent_player = 0
@@ -123,6 +124,6 @@ def get_gold_difference(game_id, puuid):
                 break
         return gold_difference
 
-    else:
-        print("Error in gold difference")
+    except Exception as e:
+        print("Error in gold difference: ", e)
         return 0
