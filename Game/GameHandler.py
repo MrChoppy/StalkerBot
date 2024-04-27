@@ -102,7 +102,11 @@ class GameHandler:
                                                  player_game_data.damage_buildings)
             elif record.stat_name == 'gold_earned' and player_game_data.gold_earned > int(record.stat_value):
                 await self.db.update_leaderboard('gold_earned', stalked_summoner_info, player_game_data.gold_earned)
-            elif record.stat_name == 'gold_difference' and float(player_game_data.gold_difference) > float(
+            elif record.stat_name == 'gold_difference_positive' and int(player_game_data.gold_difference) > int(
                     record.stat_value):
-                await self.db.update_leaderboard('gold_difference', stalked_summoner_info,
+                await self.db.update_leaderboard('gold_difference_positive', stalked_summoner_info,
+                                                 player_game_data.gold_difference)
+            elif record.stat_name == 'gold_difference_negative' and int(player_game_data.gold_difference) < int(
+                    record.stat_value):
+                await self.db.update_leaderboard('gold_difference_negative', stalked_summoner_info,
                                                  player_game_data.gold_difference)
