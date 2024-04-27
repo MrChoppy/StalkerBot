@@ -126,10 +126,12 @@ class DatabaseManager:
             self.cursor.execute("SELECT * FROM leaderboard")
             rows = self.cursor.fetchall()
             leaderboard_data = []
+            ignored_data = ['damage_taken', 'damage_buildings', 'gold_earned']
             for row in rows:
                 id, stat_name, summoner_id, stat_value = row
-                stat = LeaderboardStat(id, stat_name, summoner_id, stat_value)
-                leaderboard_data.append(stat)
+                if stat_name not in ignored_data:
+                    stat = LeaderboardStat(id, stat_name, summoner_id, stat_value)
+                    leaderboard_data.append(stat)
             return leaderboard_data
         except Exception as e:
             print(f"Error retrieving leaderboard data: {e}")

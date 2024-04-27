@@ -100,7 +100,10 @@ class Stalker(commands.Cog):
             embed = discord.Embed(title="Leaderboard", color=discord.Color.blue())
             for record in leaderboard_data:
                 if record.summoner_id is not None and record.stat_name is not None:
-                    formatted_stat_name = " ".join(word.capitalize() for word in record.stat_name.split("_"))
+                    if record.stat_name == 'gold_difference':
+                        formatted_stat_name = 'GD@15'
+                    else:
+                        formatted_stat_name = " ".join(word.capitalize() for word in record.stat_name.split("_"))
                     summoner = await self.db.get_summoner_by_id(record.summoner_id)
                     field_value = f"**{formatted_stat_name}:** {record.stat_value}\n*Summoner:* {summoner[2]}"
                     embed.add_field(name="\u200B", value=field_value, inline=False)

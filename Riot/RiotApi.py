@@ -40,12 +40,23 @@ class RiotApi:
             response.raise_for_status()
             game = response.json()
 
-            summoner = await self.find_participant_by_puuid(game, puuid)
-            team_position = summoner['teamPosition']
+            index, summoner = await self.find_participant_by_puuid(game, puuid)
+
+            team_position = ''
+            if index == 0 or index == 5:
+                team_position = 'Top'
+            elif index == 1 or index == 6:
+                team_position = 'Jungle'
+            elif index == 2 or index == 7:
+                team_position = 'Mid'
+            elif index == 3 or index == 8:
+                team_position = 'Adc'
+            elif index == 4 or index == 9:
+                team_position = 'Support'
+
             side = 'idk'
             gold_difference = await self.get_gold_difference(game_id, puuid)
-            if summoner['role'] == 'SUPPORT' or summoner['role'] == 'CARRY':
-                team_position = summoner['role']
+
             if summoner['teamId'] == 100:
                 side = 'Blue'
             elif summoner['teamId'] == 200:
@@ -53,9 +64,12 @@ class RiotApi:
 
             if gold_difference > 0:
                 gold_difference = f'+{gold_difference}'
+
             minions_killed = summoner['totalMinionsKilled'] + summoner['totalEnemyJungleMinionsKilled'] + summoner[
                 'totalAllyJungleMinionsKilled']
+
             duration = game['info']['gameDuration'] // 60
+
             return PlayerGameData(
                 team_position=team_position,
                 champion_name=summoner['championName'],
@@ -80,10 +94,10 @@ class RiotApi:
             print(f"Error in check_last_game from Riot API: {e}")
 
     async def find_participant_by_puuid(self, game, puuid):
-        for participant in game['info']['participants']:
+        for index, participant in enumerate(game['info']['participants']):
             if participant['puuid'] == puuid:
-                return participant
-        return None
+                return index, participant
+        return None, None
 
     async def get_gold_difference(self, game_id, puuid):
         try:
