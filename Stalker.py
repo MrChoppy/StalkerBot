@@ -20,7 +20,8 @@ class Stalker(commands.Cog):
             if "#" not in arg or arg.index("#") == 0 or arg.index("#") == len(arg) - 1:
                 await DiscordMessenger.send_message(
                     message="Invalid summoner name, must be in this format (no spaces): example#na1",
-                    channel=self.channel)
+                    channel=self.channel
+                )
                 return
             game_name, tag_line = arg.split("#")
 
@@ -137,9 +138,8 @@ class Stalker(commands.Cog):
             elif stalked_summoner_info.was_in_game:
                 if stalked_summoner_info.game_id is not None:
                     await self.db.set_was_in_game(stalked_summoner_info.puuid, False)
-                    game_handler = GameHandler(self.bot)
-                    await game_handler.handle_game_result(stalked_summoner_info=stalked_summoner_info,
-                                                          channel=self.channel)
+                    game_handler = GameHandler(self.bot, self.channel)
+                    await game_handler.handle_game_result(stalked_summoner_info=stalked_summoner_info)
 
 
 async def setup(self):

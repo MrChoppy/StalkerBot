@@ -65,8 +65,7 @@ class RiotApi:
             if gold_difference > 0:
                 gold_difference = f'+{gold_difference}'
 
-            minions_killed = summoner['totalMinionsKilled'] + summoner['totalEnemyJungleMinionsKilled'] + summoner[
-                'totalAllyJungleMinionsKilled']
+            minions_killed = summoner['totalMinionsKilled'] + summoner['neutralMinionsKilled']
 
             duration = game['info']['gameDuration'] // 60
 
@@ -80,6 +79,7 @@ class RiotApi:
                 dpm="{:.2f}".format(summoner['totalDamageDealtToChampions'] / duration),
                 damage_taken=summoner['totalDamageTaken'],
                 wards_placed=summoner['wardsPlaced'],
+                vision_score=summoner['visionScore'],
                 minions_killed=minions_killed,
                 csm="{:.2f}".format(minions_killed / duration),
                 damage_buildings=summoner['damageDealtToBuildings'],
