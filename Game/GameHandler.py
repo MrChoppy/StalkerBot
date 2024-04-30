@@ -1,7 +1,8 @@
 import discord
-from Riot.RiotApi import RiotApi
+
 from Database.DatabaseManager import DatabaseManager
 from Discord.DiscordMessenger import DiscordMessenger
+from Riot.RiotApi import RiotApi
 
 
 class GameHandler:
@@ -14,6 +15,7 @@ class GameHandler:
     async def handle_game_result(self, stalked_summoner_info):
         player_game_data = await self.riot.check_last_game(stalked_summoner_info.game_id, stalked_summoner_info.puuid)
         if player_game_data is not None:
+            stalked_summoner_info = await self.riot.get_player_ranked_info(stalked_summoner_info)
 
             if player_game_data.win:
                 await GameHandler.handle_win(self, stalked_summoner_info, player_game_data)
@@ -28,13 +30,14 @@ class GameHandler:
             description=f"{stalked_summoner_info.riot_name} won a game in {player_game_data.duration} minutes!!",
             color=discord.Color.green(),
             player_game_data=player_game_data,
+            stalked_summoner_info=stalked_summoner_info,
             channel=self.channel
         )
 
         if await self.db.get_consecutive_losses(stalked_summoner_info.puuid) > 0:
             await self.db.set_consecutive_losses(stalked_summoner_info.puuid, 0)
             await self.db.set_time_wasted(stalked_summoner_info.puuid, 0)
-            time_wasted = 0
+
         await self.db.set_consecutive_losses(stalked_summoner_info.puuid, 0)
         stalked_summoner_info.consecutive_wins += 1
         stalked_summoner_info.time_wasted += player_game_data.duration
@@ -44,7 +47,7 @@ class GameHandler:
         if stalked_summoner_info.consecutive_wins >= 3:
             await DiscordMessenger.send_embed(
                 title="Win streak!",
-                description=f"{stalked_summoner_info.riot_name} has won {stalked_summoner_info.consecutive_wins} games in a row!",
+                description=f"{stalked_summoner_info.riot_name} has won {stalked_summoner_info.consecutive_wins} games in a row! ",
                 color=discord.Color.green(),
                 channel=self.channel
             )
@@ -52,9 +55,10 @@ class GameHandler:
     async def handle_loss(self, stalked_summoner_info, player_game_data):
         await DiscordMessenger.send_embed(
             title="DEFEAT",
-            description=f"{stalked_summoner_info.riot_name} wasted {player_game_data.duration} minutes on a game just to lose",
+            description=f"{stalked_summoner_info.riot_name} wasted {player_game_data.duration} minutes on a game just to lose!",
             color=discord.Color.red(),
             player_game_data=player_game_data,
+            stalked_summoner_info=stalked_summoner_info,
             channel=self.channel
         )
         if await self.db.get_consecutive_wins(stalked_summoner_info.puuid) > 0:
@@ -62,7 +66,6 @@ class GameHandler:
             await self.db.set_time_wasted(stalked_summoner_info.puuid, 0)
             stalked_summoner_info.time_wasted = 0
         await self.db.set_consecutive_wins(stalked_summoner_info.puuid, 0)
-
         stalked_summoner_info.time_wasted += player_game_data.duration
         stalked_summoner_info.consecutive_losses += 1
         await self.db.set_consecutive_losses(stalked_summoner_info.puuid, stalked_summoner_info.consecutive_losses)
@@ -164,3 +167,15 @@ class GameHandler:
                 color=discord.Color.purple(),
                 channel=self.channel
             )
+
+    async def debug_game_result(self, game_id, puuid):
+        player_game_data = await self.riot.check_last_game(game_id, puuid)
+        stalked_summoner_info = await self.db.get_summoner_info_from_puuid(puuid)
+
+        if player_game_data is not None:
+            if player_game_data.win:
+                await GameHandler.handle_win(self, stalked_summoner_info, player_game_data)
+            else:
+                await GameHandler.handle_loss(self, stalked_summoner_info, player_game_data)
+            await self.check_leaderboard(stalked_summoner_info, player_game_data)
+            await self.db.set_game_id(stalked_summoner_info.puuid, None)

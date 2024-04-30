@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+
 from config import discord_bot_token
 
 intents = discord.Intents.all()

@@ -1,7 +1,6 @@
 import sqlite3
 
 from Models.LeaderboardStat import LeaderboardStat
-from Models.StalkedSummoner import StalkedSummoner
 from Models.StalkedSummonerInfo import StalkedSummonerInfo
 
 
@@ -16,16 +15,24 @@ class DatabaseManager:
     async def initialize(self):
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS summoner_data (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 puuid TEXT,
                 game_name TEXT,
                 tag_line TEXT,
                 game_id INTEGER DEFAULT NULL,
                 was_in_game BOOLEAN DEFAULT FALSE,
                 consecutive_losses INTEGER DEFAULT 0,
-                consecutive_wins INTEGER DEFAULT 0,
-                time_wasted INTEGER DEFAULT 0
+                consecutive_wins REAL DEFAULT 0,
+                time_wasted INTEGER DEFAULT 0,
+                summoner_id TEXT,
+                total_wins INTEGER,
+                total_losses INTEGER,
+                lp INTEGER,
+                rank TEXT,
+                tier TEXT
             )
         ''')
+
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS leaderboard (
                 id INTEGER PRIMARY KEY,
@@ -38,8 +45,9 @@ class DatabaseManager:
         self.connection.commit()
 
     async def insert_summoner(self, stalked_summoner):
-        self.cursor.execute("INSERT INTO summoner_data (puuid, game_name, tag_line) VALUES (?, ?, ?)",
-                            (stalked_summoner.puuid, stalked_summoner.riot_name, stalked_summoner.tag_line))
+        self.cursor.execute("INSERT INTO summoner_data (puuid, game_name, tag_line, summoner_id) VALUES (?, ?, ?, ?)",
+                            (stalked_summoner.puuid, stalked_summoner.riot_name, stalked_summoner.tag_line,
+                             stalked_summoner.summoner_id))
         self.connection.commit()
 
     async def close_connection(self):
@@ -51,13 +59,14 @@ class DatabaseManager:
         tag_line_clean = tag_line.replace(" ", "").lower()
 
         self.cursor.execute(
-            "SELECT game_name, tag_line, puuid FROM summoner_data WHERE LOWER(REPLACE(game_name, ' ', ''))=? AND LOWER("
+            "SELECT id, game_name, tag_line, puuid FROM summoner_data WHERE LOWER(REPLACE(game_name, ' ', ''))=? AND "
+            "LOWER("
             "REPLACE(tag_line, ' ', ''))=?",
             (riot_name_clean, tag_line_clean))
         result = self.cursor.fetchone()
         if result:
-            original_riot_name, tag_line, puuid = result
-            return StalkedSummoner(puuid=puuid, riot_name=original_riot_name, tag_line=tag_line)
+            id, original_riot_name, tag_line, puuid = result
+            return StalkedSummonerInfo(id=id, puuid=puuid, riot_name=original_riot_name, tag_line=tag_line)
         else:
             return None
 
@@ -96,10 +105,18 @@ class DatabaseManager:
         return self.cursor.fetchone()[0]
 
     async def get_all_summoners(self):
-        self.cursor.execute(
-            "SELECT * FROM summoner_data")
+        self.cursor.execute("SELECT * FROM summoner_data")
         rows = self.cursor.fetchall()
         return [StalkedSummonerInfo(*row) for row in rows]
+
+    async def get_summoner_info_from_puuid(self, puuid):
+        self.cursor.execute(
+            "SELECT * FROM summoner_data WHERE puuid = ?", (puuid,))
+        row = self.cursor.fetchone()
+        if row:
+            return StalkedSummonerInfo(*row)
+        else:
+            return None
 
     async def set_consecutive_losses(self, puuid, consecutive_losses):
         self.cursor.execute("UPDATE summoner_data SET consecutive_losses=? WHERE puuid=?", (consecutive_losses, puuid))
@@ -142,4 +159,8 @@ class DatabaseManager:
 
         self.cursor.execute("UPDATE leaderboard SET summoner_id=?, stat_value=? WHERE stat_name=?",
                             (summoner[0], stat_value, stat_name))
+        self.connection.commit()
+
+    async def set_summoner_id(self, puuid, summoner_id):
+        self.cursor.execute("UPDATE summoner_data SET summoner_id=? WHERE puuid=?", (summoner_id, puuid))
         self.connection.commit()

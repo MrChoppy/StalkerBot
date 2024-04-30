@@ -1,7 +1,9 @@
 import json
+
 import requests
+
 from Models.PlayerGameData import PlayerGameData
-from Models.StalkedSummoner import StalkedSummoner
+from Models.StalkedSummonerInfo import StalkedSummonerInfo
 from config import riot_api_key, region, region_wide
 
 
@@ -9,13 +11,33 @@ class RiotApi:
     def __init__(self):
         pass
 
-    async def get_summoner_puuid(self, game_name, tag_line):
-        url = f"https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{game_name}/{tag_line}?api_key={riot_api_key}"
+    async def get_summoner(self, riot_name, tag_line):
+        puuid = await self.get_summoner_puuid(riot_name, tag_line)
+        if puuid:
+            summoner_id = await self.get_summoner_id(puuid)
+            return StalkedSummonerInfo(puuid=puuid, riot_name=riot_name,
+                                       tag_line=tag_line, summoner_id=summoner_id)
+
+    async def get_summoner_puuid(self, riot_name, tag_line):
+        url = f"https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{riot_name}/{tag_line}?api_key={riot_api_key}"
         try:
             response = requests.get(url)
             response.raise_for_status()
             data = response.json()
-            return StalkedSummoner(puuid=data['puuid'], riot_name=data['gameName'], tag_line=data['tagLine'])
+            return data['puuid']
+        except requests.exceptions.RequestException as e:
+            return None
+        except json.decoder.JSONDecodeError as e:
+            print(f"Error decoding JSON response: {e}")
+            return None
+
+    async def get_summoner_id(self, puuid):
+        url = f"https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/{puuid}?api_key={riot_api_key}"
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            data = response.json()
+            return data['id']
         except requests.exceptions.RequestException as e:
             return None
         except json.decoder.JSONDecodeError as e:
@@ -129,3 +151,29 @@ class RiotApi:
         except Exception as e:
             print("Error in gold difference: ", e)
             return 0
+
+    async def get_player_ranked_info(self, stalked_summoner_info):
+        url = f"https://{region}.api.riotgames.com/lol/league/v4/entries/by-summoner/{stalked_summoner_info.summoner_id}?api_key={riot_api_key}"
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            data = response.json()
+            for queue in data:
+                if queue['queueType'] == 'RANKED_SOLO_5x5':
+                    return StalkedSummonerInfo(id=stalked_summoner_info.id,
+                                               riot_name=stalked_summoner_info.riot_name,
+                                               tag_line=stalked_summoner_info.tag_line,
+                                               game_id=stalked_summoner_info.game_id,
+                                               was_in_game=stalked_summoner_info.was_in_game,
+                                               puuid=stalked_summoner_info.puuid,
+                                               time_wasted=stalked_summoner_info.time_wasted,
+                                               consecutive_wins=stalked_summoner_info.consecutive_wins,
+                                               consecutive_losses=stalked_summoner_info.consecutive_losses,
+                                               summoner_id=stalked_summoner_info.summoner_id,
+                                               total_wins=queue['wins'],
+                                               total_losses=queue['losses'],
+                                               lp=queue['leaguePoints'],
+                                               rank=queue['rank'],
+                                               tier=queue['tier'])
+        except requests.exceptions.RequestException as e:
+            return None

@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands, tasks
+
 from Database.DatabaseManager import DatabaseManager
 from Discord.DiscordMessenger import DiscordMessenger
 from Game.GameHandler import GameHandler
@@ -23,9 +24,9 @@ class Stalker(commands.Cog):
                     channel=self.channel
                 )
                 return
-            game_name, tag_line = arg.split("#")
+            riot_name, tag_line = arg.split("#")
 
-            stalked_summoner = await self.db.get_summoner(game_name, tag_line)
+            stalked_summoner = await self.db.get_summoner(riot_name, tag_line)
             if stalked_summoner:
                 await DiscordMessenger.send_embed(
                     title="Sitting in a bush",
@@ -34,7 +35,7 @@ class Stalker(commands.Cog):
                     channel=self.channel
                 )
             else:
-                stalked_summoner = await self.riot.get_summoner_puuid(game_name, tag_line)
+                stalked_summoner = await self.riot.get_summoner(riot_name, tag_line)
                 if stalked_summoner:
                     await self.db.insert_summoner(stalked_summoner)
                     await DiscordMessenger.send_embed(
@@ -45,7 +46,7 @@ class Stalker(commands.Cog):
                     )
                 else:
                     await DiscordMessenger.send_message(
-                        message=f"Failed to find summoner with name {game_name}#{tag_line}",
+                        message=f"Failed to find summoner with name {riot_name}#{tag_line}",
                         channel=self.channel)
 
     @commands.command()
@@ -120,6 +121,24 @@ class Stalker(commands.Cog):
         self.channel = ctx.channel
         await DiscordMessenger.send_message(message="Bot started. Channel set here.", channel=self.channel)
         self.check_game_status.start()
+
+    @commands.command()
+    async def debug(self, ctx, *args):
+        if args[3] == 'yea':
+            game_handler = GameHandler(self.bot, self.channel)
+            await game_handler.debug_game_result(game_id=args[0], puuid=args[1])
+
+    @commands.command()
+    async def sync(self, ctx):
+        rows = await self.db.get_all_summoners()
+        if isinstance(rows, list) and all([isinstance(row, tuple) for row in rows]):
+            stalked_summoners_info = [StalkedSummonerInfo(*row) for row in rows]
+        else:
+            stalked_summoners_info = rows
+        for stalked_summoner_info in stalked_summoners_info:
+            if stalked_summoner_info.summoner_id is None:
+                summoner_id = await self.riot.get_summoner_id(stalked_summoner_info.puuid)
+                await self.db.set_summoner_id(puuid=stalked_summoner_info.puuid, summoner_id=summoner_id)
 
     @tasks.loop(minutes=3)
     async def check_game_status(self):
