@@ -6,6 +6,7 @@ The Discord Stalking Bot is a Python-based Discord bot designed to track and mon
 
 ## Features
 
+- **Leaderboard Command**: Displays a list showing which player has the highest of certain stat
 - **Stalk Command**: Allows users to start stalking a League of Legends summoner by providing their in-game name and tag.
 - **Unstalk Command**: Allows users to stop stalking a summoner.
 - **Stalklist Command**: Displays a list of all currently stalked summoners.
@@ -13,19 +14,20 @@ The Discord Stalking Bot is a Python-based Discord bot designed to track and mon
 - **Automatic Game Tracking**: The bot automatically checks the in-game status of stalked summoners at regular intervals.
 - **Win/Loss Tracking**: Tracks consecutive win and loss streaks for each summoner.
 - **Game Duration Tracking**: Tracks the duration of each game played by a summoner.
-- **Displays game information**: Sends an embed to the Discord channel containing information about the game
+- **Displays game information**: Displays information about the game after it's done
+
 
 ## Installation
 
 1. Clone this repository to your local machine.
 2. Set up a Discord bot application and obtain its token.
 3. Add the bot to your Discord server.
-4. Inside the config.py set up the tokens/regions.
+4. Inside a config.py file set up the tokens/regions.
 
 ## Usage
 
-1. Start the bot by running `python bot.py`.
-2. Use the various commands (`!stalk`, `!unstalk`, `!stalklist`, `!start`) to interact with the bot in your Discord server.
+1. Start the bot by running `python StalkerRun.py`.
+2. Use the various commands (`!leaderboard`,`!stalk`, `!unstalk`, `!stalklist`, `!start`) to interact with the bot in your Discord server.
 
 ## Contributors
 
