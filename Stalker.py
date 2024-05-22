@@ -1,4 +1,5 @@
 import discord
+import re
 from discord.ext import commands, tasks
 
 from Database.DatabaseManager import DatabaseManager
@@ -10,6 +11,7 @@ from Riot.RiotApi import RiotApi
 
 class Stalker(commands.Cog):
     def __init__(self, bot):
+        self.current_season_id = None
         self.bot = bot
         self.channel = None
         self.db = DatabaseManager()
@@ -96,8 +98,26 @@ class Stalker(commands.Cog):
                                               channel=self.channel)
 
     @commands.command()
-    async def leaderboard(self, ctx):
-        leaderboard_data = await self.db.get_leaderboard_data()
+    async def leaderboard(self, ctx, *args):
+        season_name_pattern = re.compile(r'^S\d+Split\d+$')
+
+        if args:
+            season_name = args[0]
+            if season_name_pattern.match(season_name):
+                season_id = await self.db.get_season(season_name)
+                await ctx.send(
+                    f"Season: {season_name}")
+            else:
+                await ctx.send(
+                    "Invalid season name format. Please use the format 'S<number>Split<number>' example: S14Split1.")
+                return
+        else:
+            season_id = self.current_season_id
+
+        if season_id is None:
+            await ctx.send("Season not found.")
+
+        leaderboard_data = await self.db.get_leaderboard_data(season_id)
         if leaderboard_data:
             embed = discord.Embed(title="Leaderboard", color=discord.Color.blue())
             for record in leaderboard_data:
@@ -120,12 +140,14 @@ class Stalker(commands.Cog):
     async def start(self, ctx, *args):
         self.channel = ctx.channel
         await DiscordMessenger.send_message(message="Bot started. Channel set here.", channel=self.channel)
+        # await self.db.initialize_database()
+        self.current_season_id = await self.db.get_latest_season()
         self.check_game_status.start()
 
     @commands.command()
     async def debug(self, ctx, *args):
-        if args[3] == 'yea':
-            game_handler = GameHandler(self.bot, self.channel)
+        if args[2] == 'yea':
+            game_handler = GameHandler(self.bot, self.channel, self.current_season_id)
             await game_handler.debug_game_result(game_id=args[0], puuid=args[1])
 
     @commands.command()
@@ -157,7 +179,7 @@ class Stalker(commands.Cog):
             elif stalked_summoner_info.was_in_game:
                 if stalked_summoner_info.game_id is not None:
                     await self.db.set_was_in_game(stalked_summoner_info.puuid, False)
-                    game_handler = GameHandler(self.bot, self.channel)
+                    game_handler = GameHandler(self.bot, self.channel, self.current_season_id)
                     await game_handler.handle_game_result(stalked_summoner_info=stalked_summoner_info)
 
 

@@ -6,11 +6,12 @@ from Riot.RiotApi import RiotApi
 
 
 class GameHandler:
-    def __init__(self, bot, channel):
+    def __init__(self, bot, channel, current_season_id):
         self.bot = bot
         self.db = DatabaseManager()
         self.riot = RiotApi()
         self.channel = channel
+        self.current_season_id = current_season_id
 
     async def handle_game_result(self, stalked_summoner_info):
         player_game_data = await self.riot.check_last_game(stalked_summoner_info.game_id, stalked_summoner_info.puuid)
@@ -80,68 +81,78 @@ class GameHandler:
             )
 
     async def check_leaderboard(self, stalked_summoner_info, player_game_data):
-        leaderboard_data = await self.db.get_leaderboard_data()
+        leaderboard_data = await self.db.get_leaderboard_data(self.current_season_id)
 
         await self.db.get_consecutive_losses(stalked_summoner_info.puuid)
         for record in leaderboard_data:
             if record.stat_name == 'kills' and player_game_data.kills > int(int(record.stat_value)):
                 await self.record_beat(stalked_summoner_info, record, player_game_data.kills)
-                await self.db.update_leaderboard('kills', stalked_summoner_info, player_game_data.kills)
+                await self.db.update_leaderboard('kills', stalked_summoner_info, player_game_data.kills,
+                                                 self.current_season_id)
             elif record.stat_name == 'deaths' and player_game_data.deaths > int(record.stat_value):
                 await self.record_beat(stalked_summoner_info, record, player_game_data.deaths)
-                await self.db.update_leaderboard('deaths', stalked_summoner_info, player_game_data.deaths)
+                await self.db.update_leaderboard('deaths', stalked_summoner_info, player_game_data.deaths,
+                                                 self.current_season_id)
             elif record.stat_name == 'assists' and player_game_data.assists > int(record.stat_value):
                 await self.record_beat(stalked_summoner_info, record, player_game_data.assists)
-                await self.db.update_leaderboard('assists', stalked_summoner_info, player_game_data.assists)
+                await self.db.update_leaderboard('assists', stalked_summoner_info, player_game_data.assists,
+                                                 self.current_season_id)
             elif record.stat_name == 'damage_dealt' and player_game_data.damage_dealt > int(record.stat_value):
                 await self.record_beat(stalked_summoner_info, record, player_game_data.damage_dealt)
-                await self.db.update_leaderboard('damage_dealt', stalked_summoner_info, player_game_data.damage_dealt)
+                await self.db.update_leaderboard('damage_dealt', stalked_summoner_info, player_game_data.damage_dealt,
+                                                 self.current_season_id)
             elif record.stat_name == 'dpm' and float(player_game_data.dpm) > float(record.stat_value):
                 await self.record_beat(stalked_summoner_info, record, player_game_data.dpm)
-                await self.db.update_leaderboard('dpm', stalked_summoner_info, player_game_data.dpm)
+                await self.db.update_leaderboard('dpm', stalked_summoner_info, player_game_data.dpm,
+                                                 self.current_season_id)
             elif record.stat_name == 'damage_taken' and player_game_data.damage_taken > int(record.stat_value):
                 # await self.record_beat(stalked_summoner_info, record, player_game_data.damage_taken)
-                await self.db.update_leaderboard('damage_taken', stalked_summoner_info, player_game_data.damage_taken)
+                await self.db.update_leaderboard('damage_taken', stalked_summoner_info, player_game_data.damage_taken,
+                                                 self.current_season_id)
             elif record.stat_name == 'wards_placed' and player_game_data.wards_placed > int(record.stat_value):
                 await self.record_beat(stalked_summoner_info, record, player_game_data.wards_placed)
-                await self.db.update_leaderboard('wards_placed', stalked_summoner_info, player_game_data.wards_placed)
+                await self.db.update_leaderboard('wards_placed', stalked_summoner_info, player_game_data.wards_placed,
+                                                 self.current_season_id)
             elif record.stat_name == 'vision_score' and player_game_data.vision_score > int(record.stat_value):
                 await self.record_beat(stalked_summoner_info, record, player_game_data.vision_score)
-                await self.db.update_leaderboard('vision_score', stalked_summoner_info, player_game_data.vision_score)
+                await self.db.update_leaderboard('vision_score', stalked_summoner_info, player_game_data.vision_score,
+                                                 self.current_season_id)
             elif record.stat_name == 'minions_killed' and player_game_data.minions_killed > int(record.stat_value):
                 await self.record_beat(stalked_summoner_info, record, player_game_data.minions_killed)
                 await self.db.update_leaderboard('minions_killed', stalked_summoner_info,
-                                                 player_game_data.minions_killed)
+                                                 player_game_data.minions_killed, self.current_season_id)
             elif record.stat_name == 'csm' and float(player_game_data.csm) > float(record.stat_value):
                 await self.record_beat(stalked_summoner_info, record, player_game_data.csm)
-                await self.db.update_leaderboard('csm', stalked_summoner_info, player_game_data.csm)
+                await self.db.update_leaderboard('csm', stalked_summoner_info, player_game_data.csm,
+                                                 self.current_season_id)
             elif record.stat_name == 'damage_buildings' and player_game_data.damage_buildings > int(record.stat_value):
                 # await self.record_beat(stalked_summoner_info, record, player_game_data.damage_buildings)
                 await self.db.update_leaderboard('damage_buildings', stalked_summoner_info,
-                                                 player_game_data.damage_buildings)
+                                                 player_game_data.damage_buildings, self.current_season_id)
             elif record.stat_name == 'gold_earned' and player_game_data.gold_earned > int(record.stat_value):
                 # await self.record_beat(stalked_summoner_info, record, player_game_data.gold_earned)
-                await self.db.update_leaderboard('gold_earned', stalked_summoner_info, player_game_data.gold_earned)
+                await self.db.update_leaderboard('gold_earned', stalked_summoner_info, player_game_data.gold_earned,
+                                                 self.current_season_id)
             elif record.stat_name == 'gold_difference_positive' and int(player_game_data.gold_difference) > int(
                     record.stat_value):
                 await self.record_beat(stalked_summoner_info, record, player_game_data.gold_difference)
                 await self.db.update_leaderboard('gold_difference_positive', stalked_summoner_info,
-                                                 player_game_data.gold_difference)
+                                                 player_game_data.gold_difference, self.current_season_id)
             elif record.stat_name == 'gold_difference_negative' and int(player_game_data.gold_difference) < int(
                     record.stat_value):
                 await self.record_beat(stalked_summoner_info, record, player_game_data.gold_difference)
                 await self.db.update_leaderboard('gold_difference_negative', stalked_summoner_info,
-                                                 player_game_data.gold_difference)
+                                                 player_game_data.gold_difference, self.current_season_id)
             elif record.stat_name == 'win_streak' and int(stalked_summoner_info.consecutive_wins) > int(
                     record.stat_value):
                 await self.record_beat(stalked_summoner_info, record, stalked_summoner_info.consecutive_wins)
                 await self.db.update_leaderboard('win_streak', stalked_summoner_info,
-                                                 stalked_summoner_info.consecutive_wins)
+                                                 stalked_summoner_info.consecutive_wins, self.current_season_id)
             elif record.stat_name == 'lose_streak' and int(stalked_summoner_info.consecutive_losses) > int(
                     record.stat_value):
                 await self.record_beat(stalked_summoner_info, record, stalked_summoner_info.consecutive_losses)
                 await self.db.update_leaderboard('lose_streak', stalked_summoner_info,
-                                                 stalked_summoner_info.consecutive_losses)
+                                                 stalked_summoner_info.consecutive_losses, self.current_season_id)
 
     async def record_beat(self, stalked_summoner_info, record, player_stat):
 

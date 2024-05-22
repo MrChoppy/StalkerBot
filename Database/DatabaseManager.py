@@ -39,9 +39,19 @@ class DatabaseManager:
                 stat_name TEXT,
                 summoner_id INTEGER,
                 stat_value INTEGER,
-                FOREIGN KEY (summoner_id) REFERENCES summoner_data (id)
+                season_id INTEGER,
+                FOREIGN KEY (summoner_id) REFERENCES summoner_data (id),
+                FOREIGN KEY (season_id) REFERENCES seasons (id)
             )
         ''')
+
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS seasons (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                season_name TEXT
+            )
+        ''')
+
         self.connection.commit()
 
     async def insert_summoner(self, stalked_summoner):
@@ -138,29 +148,49 @@ class DatabaseManager:
         self.cursor.execute("UPDATE summoner_data SET time_wasted=? WHERE puuid=?", (time_wasted, puuid))
         self.connection.commit()
 
-    async def get_leaderboard_data(self):
+    async def get_leaderboard_data(self, season_id):
         try:
-            self.cursor.execute("SELECT * FROM leaderboard")
+            self.cursor.execute("SELECT * FROM leaderboard WHERE season_id=?", (season_id,))
             rows = self.cursor.fetchall()
             leaderboard_data = []
             ignored_data = ['damage_taken', 'damage_buildings', 'gold_earned']
             for row in rows:
-                id, stat_name, summoner_id, stat_value = row
+                id, stat_name, summoner_id, stat_value, season_id = row
                 if stat_name not in ignored_data:
-                    stat = LeaderboardStat(id, stat_name, summoner_id, stat_value)
+                    stat = LeaderboardStat(id, stat_name, summoner_id, stat_value, season_id)
                     leaderboard_data.append(stat)
             return leaderboard_data
         except Exception as e:
             print(f"Error retrieving leaderboard data: {e}")
             return None
 
-    async def update_leaderboard(self, stat_name, summoner_info, stat_value):
+    async def update_leaderboard(self, stat_name, summoner_info, stat_value, current_season_id):
         summoner = await self.get_summoner_by_puuid(summoner_info.puuid)
 
-        self.cursor.execute("UPDATE leaderboard SET summoner_id=?, stat_value=? WHERE stat_name=?",
-                            (summoner[0], stat_value, stat_name))
+        self.cursor.execute('''
+            UPDATE leaderboard
+            SET summoner_id = ?, stat_value = ?
+            WHERE stat_name = ? AND season_id = ?
+        ''', (summoner[0], stat_value, stat_name, current_season_id))
+
         self.connection.commit()
 
     async def set_summoner_id(self, puuid, summoner_id):
         self.cursor.execute("UPDATE summoner_data SET summoner_id=? WHERE puuid=?", (summoner_id, puuid))
         self.connection.commit()
+
+    async def get_season(self, season_name):
+        self.cursor.execute("SELECT id FROM seasons WHERE season_name=?", (season_name,))
+        result = self.cursor.fetchone()
+        if result:
+            return result[0]
+        else:
+            return None
+
+    async def get_latest_season(self):
+        self.cursor.execute("SELECT id FROM seasons ORDER BY id DESC LIMIT 1")
+        result = self.cursor.fetchone()
+        if result:
+            return result[0]
+        else:
+            return None
