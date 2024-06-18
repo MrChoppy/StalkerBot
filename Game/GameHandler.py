@@ -18,9 +18,9 @@ class GameHandler:
         if player_game_data is not None:
             stalked_summoner_info = await self.riot.get_player_ranked_info(stalked_summoner_info)
 
-            if player_game_data.win:
+            if player_game_data.win and stalked_summoner_info and stalked_summoner_info.riot_name:
                 await GameHandler.handle_win(self, stalked_summoner_info, player_game_data)
-            else:
+            elif stalked_summoner_info and stalked_summoner_info.riot_name:
                 await GameHandler.handle_loss(self, stalked_summoner_info, player_game_data)
             await self.check_leaderboard(stalked_summoner_info, player_game_data)
             await self.db.set_game_id(stalked_summoner_info.puuid, None)

@@ -1,6 +1,5 @@
 import json
-
-import requests
+import aiohttp
 
 from Models.PlayerGameData import PlayerGameData
 from Models.StalkedSummonerInfo import StalkedSummonerInfo
@@ -21,11 +20,12 @@ class RiotApi:
     async def get_summoner_puuid(self, riot_name, tag_line):
         url = f"https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{riot_name}/{tag_line}?api_key={riot_api_key}"
         try:
-            response = requests.get(url)
-            response.raise_for_status()
-            data = response.json()
-            return data['puuid']
-        except requests.exceptions.RequestException as e:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    return data['puuid']
+        except aiohttp.ClientError as e:
             return None
         except json.decoder.JSONDecodeError as e:
             print(f"Error decoding JSON response: {e}")
@@ -34,11 +34,12 @@ class RiotApi:
     async def get_summoner_id(self, puuid):
         url = f"https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/{puuid}?api_key={riot_api_key}"
         try:
-            response = requests.get(url)
-            response.raise_for_status()
-            data = response.json()
-            return data['id']
-        except requests.exceptions.RequestException as e:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    return data['id']
+        except aiohttp.ClientError as e:
             return None
         except json.decoder.JSONDecodeError as e:
             print(f"Error decoding JSON response: {e}")
@@ -47,24 +48,26 @@ class RiotApi:
     async def get_current_game(self, puuid):
         url = f"https://{region}.api.riotgames.com/lol/spectator/v5/active-games/by-summoner/{puuid}?api_key={riot_api_key}"
         try:
-            response = requests.get(url)
-            response.raise_for_status()
-            data = response.json()
-            if data["gameQueueConfigId"] == 420:
-                return data
-        except requests.exceptions.RequestException as e:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    if data["gameQueueConfigId"] == 420:
+                        return data
+        except aiohttp.ClientError as e:
             return None
 
     async def check_last_game(self, game_id, puuid):
         url = f"https://{region_wide}.api.riotgames.com/lol/match/v5/matches/NA1_{game_id}?api_key={riot_api_key}"
         try:
-            response = requests.get(url)
-            response.raise_for_status()
-            game = response.json()
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    response.raise_for_status()
+                    game = await response.json()
 
             index, summoner = await self.find_participant_by_puuid(game, puuid)
-
             team_position = ''
+
             if index == 0 or index == 5:
                 team_position = 'Top'
             elif index == 1 or index == 6:
@@ -112,7 +115,7 @@ class RiotApi:
                 win=summoner['win']
             )
 
-        except requests.exceptions.RequestException as e:
+        except aiohttp.ClientError as e:
             print(f"Error in check_last_game from Riot API: {e}")
 
     async def find_participant_by_puuid(self, game, puuid):
@@ -125,10 +128,12 @@ class RiotApi:
         try:
             url = f'https://{region_wide}.api.riotgames.com/lol/match/v5/matches/NA1_{game_id}/timeline?api_key={riot_api_key}'
 
-            response = requests.get(url)
-            response.raise_for_status()
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    response.raise_for_status()
+                    timeline_data = await response.json()
 
-            timeline_data = response.json()['info']
+            timeline_data = timeline_data['info']
 
             main_player = 0
             opponent_player = 0
@@ -155,25 +160,26 @@ class RiotApi:
     async def get_player_ranked_info(self, stalked_summoner_info):
         url = f"https://{region}.api.riotgames.com/lol/league/v4/entries/by-summoner/{stalked_summoner_info.summoner_id}?api_key={riot_api_key}"
         try:
-            response = requests.get(url)
-            response.raise_for_status()
-            data = response.json()
-            for queue in data:
-                if queue['queueType'] == 'RANKED_SOLO_5x5':
-                    return StalkedSummonerInfo(id=stalked_summoner_info.id,
-                                               riot_name=stalked_summoner_info.riot_name,
-                                               tag_line=stalked_summoner_info.tag_line,
-                                               game_id=stalked_summoner_info.game_id,
-                                               was_in_game=stalked_summoner_info.was_in_game,
-                                               puuid=stalked_summoner_info.puuid,
-                                               time_wasted=stalked_summoner_info.time_wasted,
-                                               consecutive_wins=stalked_summoner_info.consecutive_wins,
-                                               consecutive_losses=stalked_summoner_info.consecutive_losses,
-                                               summoner_id=stalked_summoner_info.summoner_id,
-                                               total_wins=queue['wins'],
-                                               total_losses=queue['losses'],
-                                               lp=queue['leaguePoints'],
-                                               rank=queue['rank'],
-                                               tier=queue['tier'])
-        except requests.exceptions.RequestException as e:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    for queue in data:
+                        if queue['queueType'] == 'RANKED_SOLO_5x5':
+                            return StalkedSummonerInfo(id=stalked_summoner_info.id,
+                                                       puuid=stalked_summoner_info.puuid,
+                                                       riot_name=stalked_summoner_info.riot_name,
+                                                       tag_line=stalked_summoner_info.tag_line,
+                                                       game_id=stalked_summoner_info.game_id,
+                                                       was_in_game=stalked_summoner_info.was_in_game,
+                                                       time_wasted=stalked_summoner_info.time_wasted,
+                                                       consecutive_wins=stalked_summoner_info.consecutive_wins,
+                                                       consecutive_losses=stalked_summoner_info.consecutive_losses,
+                                                       summoner_id=stalked_summoner_info.summoner_id,
+                                                       total_wins=queue['wins'],
+                                                       total_losses=queue['losses'],
+                                                       lp=queue['leaguePoints'],
+                                                       rank=queue['rank'],
+                                                       tier=queue['tier'])
+        except aiohttp.ClientError as e:
             return None
