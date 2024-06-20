@@ -33,10 +33,17 @@ region = "na1" #Your options: na1, eun1, euw1, la1, la2, br1, tr1, ru, jp1, oc1,
 region_wide = "americas" #Your options: americas, europe, asia
 discord_bot_token = 'xxxxxxxxxxxxxxxxxxxxx'
 ```
+
 ## Usage
 
 1. Start the bot by running `python StalkerRun.py`.
 2. Use the various commands (`!leaderboard`,`!stalk`, `!unstalk`, `!stalklist`, `!start`) to interact with the bot in your Discord server.
+
+## Examples of what the bot does
+![image](https://github.com/MrChoppy/StalkerBot/assets/89551180/7072c318-7470-4da2-ae94-d89e514471c3)
+![image](https://github.com/MrChoppy/StalkerBot/assets/89551180/ee8689a1-e938-4e92-be5b-20d3a7a546ad)
+![image](https://github.com/MrChoppy/StalkerBot/assets/89551180/11f285e8-1b37-4124-b08e-299812a52541)
+
 
 ## Contributors
 
