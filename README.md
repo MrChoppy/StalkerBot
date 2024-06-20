@@ -1,4 +1,4 @@
-# Discord Stalking Bot
+# Stalker Bot
 
 ## Description
 
