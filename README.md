@@ -21,9 +21,15 @@ The Discord Stalking Bot is a Python-based Discord bot designed to track and mon
 
 1. Clone this repository to your local machine.
 2. Set up a Discord bot application and obtain its token.
-3. Set up a Riot Games developer account anf obtain a key.
-4. Add the bot to your Discord server.
-5. Inside a config.py file set up the tokens/regions.
+3. Set up a Riot Games developer account and obtain a key.
+4. Create a config.py file at the root.
+5. Inside the config.py file set up the tokens and regions (example below).
+6. Install the required libraries.
+7. Add the bot to your Discord server.
+8. Start the bot by typing !start in the desired Discord channel.
+9. Use !stalk Name#Tag to stalk your friends.
+10. Make fun of them when they lose.
+  
 
 config.py should look like this:
 
